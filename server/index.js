@@ -292,65 +292,85 @@ app.post('/api/report/chart', async (req, res) => {
         const labels = result.rows.map(r => r.descrizione);
         const dataValues = result.rows.map(r => parseFloat(r.totale));
 
-        // 1. Traduzione dinamica del mese per il Titolo (es. da "2026-02" a "Febbraio 2026")
+        // 1. Traduzione dinamica del mese per il Titolo
         const mesi = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
         const [anno, meseNum] = mese.split('-');
         const nomeMese = mesi[parseInt(meseNum, 10) - 1];
         const titoloGrafico = `Uscite ${nomeMese} ${anno}`;
 
-        // 2. Nuova Configurazione Grafico
+        const labels = result.rows.map(r => r.descrizione);
+        const dataValues = result.rows.map(r => parseFloat(r.totale));
+
+        // 2. Nuova Configurazione Grafico a Barre Standard
         const chartConfig = {
-            type: 'pie',
+            type: 'bar',
             data: {
-                labels: labels,
+                labels: labels, // Le categorie tornano in basso sull'asse X
                 datasets: [{ 
+                    label: 'Importo Speso', // Questo è il testo che apparirà nella legenda
                     data: dataValues,
                     backgroundColor: [
                         '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
                         '#9966FF', '#FF9F40', '#E7E9ED', '#8B4513', 
                         '#2E8B57', '#DAA520'
                     ],
-                    borderWidth: 2
+                    borderWidth: 1
                 }]
             },
             options: {
-                // TITOLO: Aumentato il "padding" per dare più respiro e staccarlo dalla torta
                 title: { 
                     display: true, 
                     text: titoloGrafico, 
-                    fontSize: 26, 
+                    fontSize: 28, 
                     fontColor: '#000000',
-                    padding: 30 
+                    padding: 20 
                 },
                 legend: {
                     display: true,
-                    position: 'left',
+                    position: 'top', // Legenda nella posizione standard in alto
                     labels: { fontSize: 12, fontColor: '#333333', padding: 15 }
                 },
-                // LAYOUT: Ripristinato il margine "top" a 30 per abbassare l'intero grafico
                 layout: {
-                    padding: { left: 10, right: 60, top: 30, bottom: 30 }
+                    padding: { left: 10, right: 20, top: 20, bottom: 20 }
+                },
+                scales: {
+                    xAxes: [{
+                        ticks: {
+                            autoSkip: false, // Mostra tutte le categorie senza saltarne nessuna
+                            maxRotation: 45, // Inclina le scritte a 45 gradi per non farle sovrapporre
+                            minRotation: 45
+                        }
+                    }],
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            callback: "YAXIS_PLACEHOLDER" // Segnaposto per l'Euro
+                        }
+                    }]
                 },
                 plugins: {
                     datalabels: {
                         color: '#000000',
                         anchor: 'end',
-                        align: 'end',
+                        align: 'end', // Spinge i numeri esattamente in cima alla colonna
                         offset: 4,
-                        font: { weight: 'bold', size: 14 },
-                        // Usiamo un testo "segnaposto" provvisorio
-                        formatter: "FORMATTER_PLACEHOLDER" 
+                        font: { weight: 'bold', size: 13 },
+                        formatter: "FORMATTER_PLACEHOLDER" // Segnaposto per l'Euro
                     }
                 }
             }
         };
 
-        // 3. IL TRUCCO: Trasformiamo tutto in testo e sostituiamo il segnaposto con la VERA funzione JavaScript.
-        // In questo modo QuickChart è costretto a leggerla ed eseguirla, aggiungendo l'Euro.
-        const chartString = JSON.stringify(chartConfig).replace(
-            '"FORMATTER_PLACEHOLDER"',
-            'function(value) { return "€ " + parseFloat(value).toFixed(2).replace(".", ","); }'
-        );
+        // 3. Iniezione delle funzioni JavaScript per formattare la valuta
+        const chartString = JSON.stringify(chartConfig)
+            .replace(
+                '"FORMATTER_PLACEHOLDER"',
+                'function(value) { return "€ " + parseFloat(value).toFixed(2).replace(".", ","); }'
+            )
+            .replace(
+                '"YAXIS_PLACEHOLDER"',
+                'function(value) { return "€ " + value; }'
+            );
 
         // 4. Richiesta a QuickChart
         const chartResponse = await fetch('https://quickchart.io/chart', {
@@ -360,7 +380,6 @@ app.post('/api/report/chart', async (req, res) => {
                 backgroundColor: 'white',
                 width: 800,
                 height: 600,
-                // Passiamo la stringa JavaScript manipolata, non l'oggetto JSON!
                 chart: chartString 
             })
         });
