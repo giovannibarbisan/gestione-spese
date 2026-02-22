@@ -2,12 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Trash2, PlusCircle, Wallet, TrendingUp, TrendingDown, FileSpreadsheet, FileText, X } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-import React, { useState, useEffect } from 'react';
 
-//const API_URL = 'http://192.168.178.33:5000/api';
-// --- CONFIGURAZIONE DINAMICA ---
-// Se siamo su localhost usa localhost, se siamo su IP (es. dal Mac) usa l'IP
-//const API_URL = `${window.location.protocol}//${window.location.hostname}:5000/api`;
 const API_URL = "https://gestione-spese-api.onrender.com/api";
 
 // Lista dei pannelli richiesti
