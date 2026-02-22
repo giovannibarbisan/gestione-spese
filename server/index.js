@@ -292,20 +292,60 @@ app.post('/api/report/chart', async (req, res) => {
         const labels = result.rows.map(r => r.descrizione);
         const dataValues = result.rows.map(r => parseFloat(r.totale));
 
-        // 2. Configurazione del grafico per QuickChart
+        // 1. Traduzione dinamica del mese per il Titolo (es. da "2026-02" a "Febbraio 2026")
+        const mesi = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+        const [anno, meseNum] = mese.split('-');
+        const nomeMese = mesi[parseInt(meseNum, 10) - 1];
+        const titoloGrafico = `Uscite ${nomeMese} ${anno}`;
+
+        // 2. Nuova Configurazione Grafico
         const chartConfig = {
             type: 'pie',
             data: {
                 labels: labels,
                 datasets: [{ 
                     data: dataValues,
-                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#E7E9ED', '#8B4513']
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                        '#9966FF', '#FF9F40', '#E7E9ED', '#8B4513', 
+                        '#2E8B57', '#DAA520' // Aggiunti più colori per sicurezza
+                    ],
+                    borderWidth: 2
                 }]
             },
             options: {
+                // TITOLO IN ALTO AL CENTRO (Ora è fuori dai plugins per compatibilità con QuickChart)
+                title: { 
+                    display: true, 
+                    text: titoloGrafico, 
+                    fontSize: 26,
+                    fontColor: '#000000',
+                    padding: 25
+                },
+                // LEGENDA A SINISTRA
+                legend: {
+                    display: true,
+                    position: 'left',
+                    labels: { 
+                        fontSize: 14, 
+                        fontColor: '#333333', 
+                        padding: 15 
+                    }
+                },
+                // SPAZIO EXTRA (Padding) per non far tagliare i numeri spinti verso l'esterno
+                layout: {
+                    padding: { left: 10, right: 60, top: 20, bottom: 20 }
+                },
                 plugins: {
-                    title: { display: true, text: `Riepilogo Uscite - ${mese}`, fontSize: 24 },
-                    datalabels: { display: true, color: '#fff', font: { weight: 'bold', size: 14 } }
+                    datalabels: {
+                        color: '#000000', // Numeri in nero
+                        anchor: 'end',    // Ancora l'etichetta al bordo esterno della fetta
+                        align: 'end',     // Spinge il testo fuori dalla fetta (evita sovrapposizioni)
+                        offset: 4,        // Distanza dal bordo
+                        // Funzione formattatrice (inviata come stringa a QuickChart) per l'Euro
+                        formatter: "(value) => '€ ' + parseFloat(value).toFixed(2).replace('.', ',')",
+                        font: { weight: 'bold', size: 13 }
+                    }
                 }
             }
         };
