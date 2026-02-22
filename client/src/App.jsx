@@ -46,21 +46,14 @@ const formatDate = (dateString) => {
 };
 
 function App() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+
   // --- NUOVI STATI PER IL LOGIN ---
   const [isAuth, setIsAuth] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [refreshKey, setRefreshKey] = useState(0); // Per forzare il ricaricamento dati
-
-     
-  // 2. STATI DELL'APP ORIGINALE (Quelli che sono stati cancellati per sbaglio)
-  const [activeTab, setActiveTab] = useState('Inserisci'); // <-- ECCO IL COLPEVOLE MANCANTE!
-  //const [movimenti, setMovimenti] = useState([]); 
-  //const [categorie, setCategorie] = useState([]);
-
-
-
   const triggerRefresh = () => setRefreshKey(old => old + 1);
   
   // All'avvio, controlla se il telefono ha già memorizzato la password
