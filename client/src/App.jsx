@@ -42,42 +42,47 @@ const formatDate = (dateString) => {
 };
 
 function App() {
-  // --- NUOVI STATI PER IL LOGIN ---
-  const [isAuth, setIsAuth] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [loadingAuth, setLoadingAuth] = useState(true);
-  
-  // All'avvio, controlla se il telefono ha già memorizzato la password
-  useEffect(() => {
-      const savedPass = localStorage.getItem('appPassword');
-      if (savedPass) {
-          axios.defaults.headers.common['x-app-password'] = savedPass;
-          setIsAuth(true);
-      }
-      setLoadingAuth(false);
-  }, []);
-  
-  // Gestione del click sul pulsante "Entra"
-  const handleLogin = async (e) => {
-      e.preventDefault();
-      try {
-          await axios.post(`${API_URL}/login`, { password: passwordInput });
-          // Se corretta, la salva nel telefono
-          localStorage.setItem('appPassword', passwordInput);
-          axios.defaults.headers.common['x-app-password'] = passwordInput;
-          setIsAuth(true);
-          toast.success("Accesso effettuato!");
-      } catch (error) {
-          toast.error("Password errata!");
-      }
-  };
-  
-  // Gestione del Logout (opzionale)
-  const handleLogout = () => {
-      localStorage.removeItem('appPassword');
-      delete axios.defaults.headers.common['x-app-password'];
-      setIsAuth(false);
-  };
+    const [isAuth, setIsAuth] = useState(false);
+    const [passwordInput, setPasswordInput] = useState('');
+    const [loadingAuth, setLoadingAuth] = useState(true);
+
+    // 1. All'avvio, controlla se la password è già salvata
+    useEffect(() => {
+        const savedPass = localStorage.getItem('appPassword');
+        if (savedPass) {
+            setIsAuth(true);
+        }
+        setLoadingAuth(false);
+    }, []);
+
+    // 2. Gestione del Login con "fetch" nativo (senza axios)
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await fetch(`${API_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: passwordInput })
+            });
+
+            if (response.ok) {
+                // Password corretta!
+                localStorage.setItem('appPassword', passwordInput);
+                setIsAuth(true);
+            } else {
+                alert("Password errata!");
+            }
+        } catch (error) {
+            alert("Errore di connessione al server.");
+        }
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('appPassword');
+        setIsAuth(false);
+        setPasswordInput('');
+    };
+
 
     // --- (Qui sotto tieni tutto il tuo codice esistente: loadData, handleExport, ecc.) ---  const [activeTab, setActiveTab] = useState('dashboard');
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
