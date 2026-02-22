@@ -314,26 +314,22 @@ app.post('/api/report/chart', async (req, res) => {
                 }]
             },
             options: {
-                // TITOLO: Spostato più in alto
+                // TITOLO: Aumentato il "padding" per dare più respiro e staccarlo dalla torta
                 title: { 
                     display: true, 
                     text: titoloGrafico, 
-                    fontSize: 28, // Leggermente più grande per dargli importanza
+                    fontSize: 26, 
                     fontColor: '#000000',
-                    padding: 10 // Ridotto lo spazio tra il titolo e la torta
+                    padding: 30 
                 },
                 legend: {
                     display: true,
                     position: 'left',
-                    labels: { 
-                        fontSize: 14, 
-                        fontColor: '#333333', 
-                        padding: 15 
-                    }
+                    labels: { fontSize: 12, fontColor: '#333333', padding: 15 }
                 },
-                // LAYOUT: Spinto il grafico in alto riducendo il margine "top" a 0 e aumentando il "bottom"
+                // LAYOUT: Ripristinato il margine "top" a 30 per abbassare l'intero grafico
                 layout: {
-                    padding: { left: 10, right: 60, top: 0, bottom: 50 }
+                    padding: { left: 10, right: 60, top: 30, bottom: 30 }
                 },
                 plugins: {
                     datalabels: {
@@ -341,14 +337,22 @@ app.post('/api/report/chart', async (req, res) => {
                         anchor: 'end',
                         align: 'end',
                         offset: 4,
-                        // FORMATTAZIONE EURO: Riscritto come funzione JavaScript standard per compatibilità QuickChart
-                        formatter: "function(value) { return '€ ' + parseFloat(value).toFixed(2).replace('.', ','); }",
-                        font: { weight: 'bold', size: 14 }
+                        font: { weight: 'bold', size: 14 },
+                        // Usiamo un testo "segnaposto" provvisorio
+                        formatter: "FORMATTER_PLACEHOLDER" 
                     }
                 }
             }
         };
-        // 3. Richiesta a QuickChart (usiamo POST per maggiore sicurezza e stabilità sui dati)
+
+        // 3. IL TRUCCO: Trasformiamo tutto in testo e sostituiamo il segnaposto con la VERA funzione JavaScript.
+        // In questo modo QuickChart è costretto a leggerla ed eseguirla, aggiungendo l'Euro.
+        const chartString = JSON.stringify(chartConfig).replace(
+            '"FORMATTER_PLACEHOLDER"',
+            'function(value) { return "€ " + parseFloat(value).toFixed(2).replace(".", ","); }'
+        );
+
+        // 4. Richiesta a QuickChart
         const chartResponse = await fetch('https://quickchart.io/chart', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -356,15 +360,16 @@ app.post('/api/report/chart', async (req, res) => {
                 backgroundColor: 'white',
                 width: 800,
                 height: 600,
-                chart: chartConfig
+                // Passiamo la stringa JavaScript manipolata, non l'oggetto JSON!
+                chart: chartString 
             })
         });
 
-        // 4. Conversione dell'immagine in Base64
+        // 5. Conversione dell'immagine in Base64
         const arrayBuffer = await chartResponse.arrayBuffer();
         const base64Image = Buffer.from(arrayBuffer).toString('base64');
 
-        // 5. Invio allo Script di Google Drive
+        // 6. Invio allo Script di Google Drive
         const payload = {
             folderId: process.env.GOOGLE_DRIVE_FOLDER_ID,
             filename: `Grafico_Uscite_${mese}.png`,
