@@ -13,6 +13,40 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use(express.json());
+
+// ==========================================
+// NUOVO: SISTEMA DI SICUREZZA (IL BUTTAFUORI)
+// ==========================================
+
+// 1. Rotta per verificare se la password è corretta
+app.post('/api/login', (req, res) => {
+    const { password } = req.body;
+    if (password === process.env.APP_PASSWORD) {
+        res.json({ success: true });
+    } else {
+        res.status(401).json({ error: 'Password errata' });
+    }
+});
+
+// 2. Middleware: controlla la password su TUTTE le altre richieste API
+const checkAuth = (req, res, next) => {
+    if (req.path === '/login') return next(); // Salta il controllo per la rotta di login
+    
+    // Legge la password inviata dal Frontend (React)
+    const clientPassword = req.headers['x-app-password'];
+    
+    if (clientPassword && clientPassword === process.env.APP_PASSWORD) {
+        next(); // Parola d'ordine corretta: lascia passare la richiesta
+    } else {
+        res.status(401).json({ error: 'Accesso non autorizzato' }); // Caccia via l'intruso
+    }
+};
+
+// 3. Applica il buttafuori a tutte le rotte API
+app.use('/api', checkAuth);
+
+
 // 1. CONFIGURAZIONE CONNESSIONE POSTGRESQL (Supabase)
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
