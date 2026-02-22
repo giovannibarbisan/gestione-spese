@@ -271,6 +271,89 @@ app.post('/api/report/detail', async (req, res) => {
     }
 });
 
+// API: Genera Grafico a Torta (Solo Uscite) e salva su Drive
+app.post('/api/report/chart', async (req, res) => {
+    const { mese } = req.body; 
+
+    try {
+        // 1. Estrai le spese del mese raggruppate per categoria (Solo Uscite)
+        const sql = `
+            SELECT c.descrizione, SUM(m.importo) as totale
+            FROM movimenti m
+            JOIN categorie c ON m.id_categoria = c.id_categoria
+            WHERE TO_CHAR(m.data_movimento, 'YYYY-MM') = $1 AND c.tipo_movimento = 'U'
+            GROUP BY c.descrizione
+            HAVING SUM(m.importo) > 0
+        `;
+        const result = await pool.query(sql, [mese]);
+        
+        if (result.rows.length === 0) return res.status(404).json({ error: "Nessuna spesa trovata per questo mese." });
+
+        const labels = result.rows.map(r => r.descrizione);
+        const dataValues = result.rows.map(r => parseFloat(r.totale));
+
+        // 2. Configurazione del grafico per QuickChart
+        const chartConfig = {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{ 
+                    data: dataValues,
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#E7E9ED', '#8B4513']
+                }]
+            },
+            options: {
+                plugins: {
+                    title: { display: true, text: `Riepilogo Uscite - ${mese}`, fontSize: 24 },
+                    datalabels: { display: true, color: '#fff', font: { weight: 'bold', size: 14 } }
+                }
+            }
+        };
+
+        // 3. Richiesta a QuickChart (usiamo POST per maggiore sicurezza e stabilità sui dati)
+        const chartResponse = await fetch('https://quickchart.io/chart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                backgroundColor: 'white',
+                width: 800,
+                height: 600,
+                chart: chartConfig
+            })
+        });
+
+        // 4. Conversione dell'immagine in Base64
+        const arrayBuffer = await chartResponse.arrayBuffer();
+        const base64Image = Buffer.from(arrayBuffer).toString('base64');
+
+        // 5. Invio allo Script di Google Drive
+        const payload = {
+            folderId: process.env.GOOGLE_DRIVE_FOLDER_ID,
+            filename: `Grafico_Uscite_${mese}.png`,
+            isImage: true,
+            mimeType: 'image/png',
+            image: base64Image
+        };
+
+        const googleResponse = await fetch(process.env.GOOGLE_SCRIPT_URL, {
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload)
+        });
+        const googleResult = await googleResponse.json();
+
+        if (googleResult.status === 'success') {
+            res.json({ success: true, url: googleResult.url });
+        } else {
+            throw new Error(googleResult.message);
+        }
+
+    } catch (err) {
+        console.error("ERRORE GRAFICO:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Funzione di avvio asincrona (adattata per Postgres)
 async function startServer() {
     try {

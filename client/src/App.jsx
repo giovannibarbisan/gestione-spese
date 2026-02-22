@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Trash2, PlusCircle, Wallet, TrendingUp, TrendingDown, FileSpreadsheet, FileText, X } from 'lucide-react';
+import { Trash2, PlusCircle, Wallet, TrendingUp, TrendingDown, FileSpreadsheet, FileText, X, PieChart } from 'lucide-react'; // <--- AGGIUNTO PieChart
 import toast, { Toaster } from 'react-hot-toast';
 
-//const API_URL = 'http://192.168.178.33:5000/api';
 // --- CONFIGURAZIONE DINAMICA ---
-// Se siamo su localhost usa localhost, se siamo su IP (es. dal Mac) usa l'IP
-//const API_URL = `${window.location.protocol}//${window.location.hostname}:5000/api`;
 const API_URL = "https://gestione-spese-api.onrender.com/api";
 
 // Lista dei pannelli richiesti
@@ -48,12 +45,12 @@ const formatDate = (dateString) => {
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  // --- NUOVI STATI PER IL LOGIN ---
+  // --- STATI PER IL LOGIN E DATI ---
   const [isAuth, setIsAuth] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
-  const [refreshKey, setRefreshKey] = useState(0); // Per forzare il ricaricamento dati
+  const [refreshKey, setRefreshKey] = useState(0); 
   const triggerRefresh = () => setRefreshKey(old => old + 1);
   
   // All'avvio, controlla se il telefono ha già memorizzato la password
@@ -71,7 +68,6 @@ function App() {
       e.preventDefault();
       try {
           await axios.post(`${API_URL}/login`, { password: passwordInput });
-          // Se corretta, la salva nel telefono
           localStorage.setItem('appPassword', passwordInput);
           axios.defaults.headers.common['x-app-password'] = passwordInput;
           setIsAuth(true);
@@ -81,19 +77,15 @@ function App() {
       }
   };
   
-  // Gestione del Logout (opzionale)
+  // Gestione del Logout
   const handleLogout = () => {
       localStorage.removeItem('appPassword');
       delete axios.defaults.headers.common['x-app-password'];
       setIsAuth(false);
   };
 
-    // --- (Qui sotto tieni tutto il tuo codice esistente: loadData, handleExport, ecc.) ---
-
-  // Se sta ancora caricando, non mostrare nulla
   if (loadingAuth) return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Caricamento...</div>;
   
-  // Se non è autorizzato, mostra SOLO la schermata di login
   if (!isAuth) {
       return (
           <div className="min-h-screen bg-blue-900 flex items-center justify-center p-4">
@@ -116,18 +108,22 @@ function App() {
       );
   }
   
-  // Se è autorizzato, mostra la tua app normale!
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
-      <Toaster position="top-center" reverseOrder={false} /> {/* <--- AGGIUNGI QUI */}
+      <Toaster position="top-center" reverseOrder={false} />
+      
       {/* Header */}
       <header className="bg-blue-900 text-white p-6 shadow-lg">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Wallet /> Gestione Spese
-          </h1>
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center justify-between w-full md:w-auto">
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <Wallet /> Gestione Spese
+              </h1>
+              {/* Tasto Logout compatto per mobile */}
+              <button onClick={handleLogout} className="md:hidden text-sm text-blue-200 underline">Esci</button>
+          </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             {/* Selettore Mese */}
             <input 
               type="month" 
@@ -136,17 +132,19 @@ function App() {
               className="bg-blue-800 text-white border border-blue-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
 
-            {/* Pulsanti Report */}
+            {/* Pulsanti Report - ORA SONO 3 */}
             <ReportButton month={currentMonth} />      {/* Sintetico (Verde) */}
             <DetailReportButton month={currentMonth} /> {/* Dettaglio (Indaco) */}
+            <ChartReportButton month={currentMonth} />  {/* Grafico (Viola) */}
+            
+            {/* Tasto Logout per Desktop */}
+            <button onClick={handleLogout} className="hidden md:block ml-4 text-sm text-blue-200 hover:text-white transition-colors">Logout</button>
           </div>
-
         </div>
-
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto mt-8 p-4">
+      <main className="max-w-7xl mx-auto mt-8 p-4">
         
         {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-2 mb-6 border-b border-gray-200 pb-4">
@@ -225,7 +223,7 @@ function StatCard({ label, value, color, icon }) {
       <div>
         <p className="text-gray-500 text-sm uppercase tracking-wide">{label}</p>
         <p className={`text-3xl font-bold mt-1 ${color}`}>
-          {formatCurrency(value)} {/* <--- MODIFICATO */}
+          {formatCurrency(value)}
         </p>
       </div>
       <div className={`p-3 rounded-full bg-gray-50 ${color}`}>{icon}</div>
@@ -233,7 +231,6 @@ function StatCard({ label, value, color, icon }) {
   );
 }
 
-// --- Componente: Liste Specifiche (Entrate o Categorie) ---
 // --- Componente: Liste Specifiche ---
 function ListPanel({ config, month, refreshKey, onChange }) {
   const [items, setItems] = useState([]);
@@ -249,21 +246,19 @@ function ListPanel({ config, month, refreshKey, onChange }) {
       .catch(err => console.error(err));
   }, [config, month, refreshKey]);
 
-  // 1. Funzione che esegue la cancellazione vera e propria (chiamata dal tasto "Sì")
   const confirmDelete = (id) => {
     const loadingToast = toast.loading("Cancellazione in corso...");
     
     axios.delete(`${API_URL}/movimenti/${id}`)
       .then(() => {
         toast.success("Voce eliminata!", { id: loadingToast });
-        onChange(); // Aggiorna la lista
+        onChange(); 
       })
       .catch(err => {
         toast.error("Errore cancellazione", { id: loadingToast });
       });
   };
 
-  // 2. Funzione che mostra il Toast di conferma personalizzato
   const handleDelete = (id) => {
     toast((t) => (
       <div className="flex flex-col gap-3 min-w-[200px]">
@@ -271,19 +266,16 @@ function ListPanel({ config, month, refreshKey, onChange }) {
           Eliminare questa riga?
         </div>
         <div className="flex gap-3 justify-center">
-          {/* Pulsante ANNULLA */}
           <button
             onClick={() => toast.dismiss(t.id)}
             className="px-3 py-1 text-sm font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors border border-gray-200"
           >
             No
           </button>
-          
-          {/* Pulsante CONFERMA (Rosso) */}
           <button
             onClick={() => {
-              toast.dismiss(t.id); // Chiude il toast di domanda
-              confirmDelete(id);   // Esegue l'azione
+              toast.dismiss(t.id);
+              confirmDelete(id);
             }}
             className="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors shadow-sm"
           >
@@ -292,14 +284,11 @@ function ListPanel({ config, month, refreshKey, onChange }) {
         </div>
       </div>
     ), {
-      duration: Infinity, // Non sparisce da solo, aspetta il click
+      duration: Infinity, 
       position: 'top-center',
       style: {
-        border: '1px solid #e5e7eb',
-        padding: '16px',
-        background: '#fff',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        borderRadius: '12px'
+        border: '1px solid #e5e7eb', padding: '16px', background: '#fff',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', borderRadius: '12px'
       },
     });
   };
@@ -331,9 +320,7 @@ function ListPanel({ config, month, refreshKey, onChange }) {
             ) : (
               items.map(item => (
                 <tr key={item.ID_MOVIMENTO} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-gray-600">
-                    {formatDate(item.DATA_MOVIMENTO)}
-                  </td>
+                  <td className="px-6 py-4 text-gray-600">{formatDate(item.DATA_MOVIMENTO)}</td>
                   <td className="px-6 py-4 font-medium text-gray-800">{item.NOTA || '-'}</td>
                   <td className={`px-6 py-4 text-right font-bold ${config.type === 'ENTRATE' ? 'text-green-600' : 'text-gray-800'}`}>
                     {formatCurrency(item.IMPORTO)}
@@ -361,10 +348,7 @@ function ListPanel({ config, month, refreshKey, onChange }) {
 function AddTransactionForm({ onAdd }) {
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({
-    categoria: '',
-    importo: '',
-    nota: '',
-    data: new Date().toISOString().slice(0, 10)
+    categoria: '', importo: '', nota: '', data: new Date().toISOString().slice(0, 10)
   });
 
   useEffect(() => {
@@ -374,23 +358,20 @@ function AddTransactionForm({ onAdd }) {
   const handleSubmit = (e) => {
       e.preventDefault();
       if (!form.categoria || !form.importo) {
-          toast.error("Compila tutti i campi obbligatori!"); // <--- TOAST ERRORE
+          toast.error("Compila tutti i campi obbligatori!");
           return;
       }
   
-      // Creiamo un 'toast di caricamento' che si aggiorna quando finisce
       const loadingToast = toast.loading('Salvataggio in corso...');
   
       axios.post(`${API_URL}/movimenti`, form)
         .then(() => {
-          toast.success("Movimento salvato con successo!", { id: loadingToast }); // <--- TOAST SUCCESSO
-          
-          // Reset del form intelligente (mantiene la data odierna)
+          toast.success("Movimento salvato con successo!", { id: loadingToast });
           setForm({ ...form, importo: '', nota: '' }); 
           onAdd();
         })
         .catch(err => {
-          toast.error("Errore salvataggio: " + err.message, { id: loadingToast }); // <--- TOAST ERRORE
+          toast.error("Errore salvataggio: " + err.message, { id: loadingToast });
         });
     };
 
@@ -403,18 +384,15 @@ function AddTransactionForm({ onAdd }) {
         <div className="md:col-span-1">
             <label className="block text-xs font-bold text-gray-500 mb-1">Data</label>
             <input 
-                type="date" 
-                className="w-full border rounded p-2"
-                value={form.data}
-                onChange={e => setForm({...form, data: e.target.value})}
+                type="date" className="w-full border rounded p-2"
+                value={form.data} onChange={e => setForm({...form, data: e.target.value})}
             />
         </div>
         <div className="md:col-span-1">
             <label className="block text-xs font-bold text-gray-500 mb-1">Categoria</label>
             <select 
                 className="w-full border rounded p-2 bg-white"
-                value={form.categoria}
-                onChange={e => setForm({...form, categoria: e.target.value})}
+                value={form.categoria} onChange={e => setForm({...form, categoria: e.target.value})}
             >
                 <option value="">Seleziona...</option>
                 {categories.map(c => (
@@ -425,27 +403,18 @@ function AddTransactionForm({ onAdd }) {
         <div className="md:col-span-1">
             <label className="block text-xs font-bold text-gray-500 mb-1">Importo (€)</label>
             <input 
-                type="number" step="0.01" 
-                className="w-full border rounded p-2"
-                placeholder="0.00"
-                value={form.importo}
-                onChange={e => setForm({...form, importo: e.target.value})}
+                type="number" step="0.01" className="w-full border rounded p-2" placeholder="0.00"
+                value={form.importo} onChange={e => setForm({...form, importo: e.target.value})}
             />
         </div>
         <div className="md:col-span-1">
             <label className="block text-xs font-bold text-gray-500 mb-1">Nota</label>
             <input 
-                type="text" 
-                className="w-full border rounded p-2"
-                placeholder="Dettaglio spesa..."
-                value={form.nota}
-                onChange={e => setForm({...form, nota: e.target.value})}
+                type="text" className="w-full border rounded p-2" placeholder="Dettaglio spesa..."
+                value={form.nota} onChange={e => setForm({...form, nota: e.target.value})}
             />
         </div>
-        <button 
-            type="submit" 
-            className="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition-colors h-10"
-        >
+        <button type="submit" className="bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition-colors h-10">
             Salva
         </button>
       </form>
@@ -453,24 +422,22 @@ function AddTransactionForm({ onAdd }) {
   );
 }
 
-// --- Componente: Pulsante Report Google Drive ---
+// --- Componente: Pulsante Report Sintetico ---
 function ReportButton({ month }) {
   const [loading, setLoading] = useState(false);
 
   const handleGenerateReport = async () => {
     if (!month) return;
-    
     setLoading(true);
     const toastId = toast.loading("Generazione Report Drive in corso...");
 
     try {
       const response = await axios.post(`${API_URL}/report`, { mese: month });
-      
       if (response.data.success) {
         toast.success("Report creato su Drive!", { id: toastId });
+        window.open(response.data.url, '_blank');
       }
     } catch (error) {
-      console.error(error);
       const msg = error.response?.data?.error || "Errore generazione report";
       toast.error(msg, { id: toastId });
     } finally {
@@ -480,18 +447,12 @@ function ReportButton({ month }) {
 
   return (
     <button
-      onClick={handleGenerateReport}
-      disabled={loading}
-      className={`
-        flex items-center gap-2 px-4 py-2 rounded font-medium transition-colors
-        ${loading 
-          ? 'bg-blue-800 text-blue-300 cursor-not-allowed' 
-          : 'bg-green-600 hover:bg-green-700 text-white shadow-md'}
-      `}
+      onClick={handleGenerateReport} disabled={loading}
+      className={`flex items-center gap-2 px-3 py-2 text-sm rounded font-medium transition-colors ${loading ? 'bg-blue-800 text-blue-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white shadow-md'}`}
       title="Esporta mese su Google Drive"
     >
-      <FileSpreadsheet size={18} />
-      {loading ? 'Attendi...' : 'Report sint.'}
+      <FileSpreadsheet size={16} />
+      {loading ? 'Attendi...' : 'Sintetico'}
     </button>
   );
 }
@@ -502,19 +463,16 @@ function DetailReportButton({ month }) {
 
   const handleGenerateDetail = async () => {
     if (!month) return;
-    
     setLoading(true);
     const toastId = toast.loading("Generazione Report Dettagliato...");
 
     try {
-      // Notare l'URL diverso: /api/report/detail
       const response = await axios.post(`${API_URL}/report/detail`, { mese: month });
-      
       if (response.data.success) {
         toast.success("Report Dettagliato creato!", { id: toastId });
+        window.open(response.data.url, '_blank');
       }
     } catch (error) {
-      console.error(error);
       const msg = error.response?.data?.error || "Errore generazione report";
       toast.error(msg, { id: toastId });
     } finally {
@@ -524,19 +482,48 @@ function DetailReportButton({ month }) {
 
   return (
     <button
-      onClick={handleGenerateDetail}
-      disabled={loading}
-      className={`
-        flex items-center gap-2 px-4 py-2 rounded font-medium transition-colors
-        ${loading 
-          ? 'bg-blue-800 text-blue-300 cursor-not-allowed' 
-          : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'} 
-      `} 
-      // Ho usato Indigo invece di Green per distinguerlo visivamente
+      onClick={handleGenerateDetail} disabled={loading}
+      className={`flex items-center gap-2 px-3 py-2 text-sm rounded font-medium transition-colors ${loading ? 'bg-blue-800 text-blue-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'}`} 
       title="Elenco completo movimenti su Google Drive"
     >
-      <FileText size={18} />
-      {loading ? 'Attendi...' : 'Report dett.'}
+      <FileText size={16} />
+      {loading ? 'Attendi...' : 'Dettaglio'}
+    </button>
+  );
+}
+
+// --- NUOVO Componente: Pulsante Grafico a Torta ---
+function ChartReportButton({ month }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleGenerateChart = async () => {
+    if (!month) return;
+    setLoading(true);
+    const toastId = toast.loading("Creazione grafico in corso...");
+
+    try {
+      const response = await axios.post(`${API_URL}/report/chart`, { mese: month });
+      if (response.data.success) {
+        toast.success("Grafico salvato su Drive!", { id: toastId });
+        // Apre automaticamente l'immagine generata in una nuova scheda
+        window.open(response.data.url, '_blank');
+      }
+    } catch (error) {
+      const msg = error.response?.data?.error || "Errore generazione grafico";
+      toast.error(msg, { id: toastId });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleGenerateChart} disabled={loading}
+      className={`flex items-center gap-2 px-3 py-2 text-sm rounded font-medium transition-colors ${loading ? 'bg-blue-800 text-blue-300 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 text-white shadow-md'}`} 
+      title="Genera grafico a torta delle uscite"
+    >
+      <PieChart size={16} />
+      {loading ? 'Attendi...' : 'Grafico'}
     </button>
   );
 }
