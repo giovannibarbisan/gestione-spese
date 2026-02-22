@@ -308,21 +308,20 @@ app.post('/api/report/chart', async (req, res) => {
                     backgroundColor: [
                         '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
                         '#9966FF', '#FF9F40', '#E7E9ED', '#8B4513', 
-                        '#2E8B57', '#DAA520' // Aggiunti più colori per sicurezza
+                        '#2E8B57', '#DAA520'
                     ],
                     borderWidth: 2
                 }]
             },
             options: {
-                // TITOLO IN ALTO AL CENTRO (Ora è fuori dai plugins per compatibilità con QuickChart)
+                // TITOLO: Spostato più in alto
                 title: { 
                     display: true, 
                     text: titoloGrafico, 
-                    fontSize: 26,
+                    fontSize: 28, // Leggermente più grande per dargli importanza
                     fontColor: '#000000',
-                    padding: 25
+                    padding: 10 // Ridotto lo spazio tra il titolo e la torta
                 },
-                // LEGENDA A SINISTRA
                 legend: {
                     display: true,
                     position: 'left',
@@ -332,24 +331,23 @@ app.post('/api/report/chart', async (req, res) => {
                         padding: 15 
                     }
                 },
-                // SPAZIO EXTRA (Padding) per non far tagliare i numeri spinti verso l'esterno
+                // LAYOUT: Spinto il grafico in alto riducendo il margine "top" a 0 e aumentando il "bottom"
                 layout: {
-                    padding: { left: 10, right: 60, top: 20, bottom: 20 }
+                    padding: { left: 10, right: 60, top: 0, bottom: 50 }
                 },
                 plugins: {
                     datalabels: {
-                        color: '#000000', // Numeri in nero
-                        anchor: 'end',    // Ancora l'etichetta al bordo esterno della fetta
-                        align: 'end',     // Spinge il testo fuori dalla fetta (evita sovrapposizioni)
-                        offset: 4,        // Distanza dal bordo
-                        // Funzione formattatrice (inviata come stringa a QuickChart) per l'Euro
-                        formatter: "(value) => '€ ' + parseFloat(value).toFixed(2).replace('.', ',')",
-                        font: { weight: 'bold', size: 13 }
+                        color: '#000000',
+                        anchor: 'end',
+                        align: 'end',
+                        offset: 4,
+                        // FORMATTAZIONE EURO: Riscritto come funzione JavaScript standard per compatibilità QuickChart
+                        formatter: "function(value) { return '€ ' + parseFloat(value).toFixed(2).replace('.', ','); }",
+                        font: { weight: 'bold', size: 14 }
                     }
                 }
             }
         };
-
         // 3. Richiesta a QuickChart (usiamo POST per maggiore sicurezza e stabilità sui dati)
         const chartResponse = await fetch('https://quickchart.io/chart', {
             method: 'POST',
