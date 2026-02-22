@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Trash2, PlusCircle, Wallet, TrendingUp, TrendingDown, FileSpreadsheet, FileText, X } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import React, { useState, useEffect } from 'react';
 
 //const API_URL = 'http://192.168.178.33:5000/api';
 // --- CONFIGURAZIONE DINAMICA ---
@@ -46,12 +47,76 @@ const formatDate = (dateString) => {
 };
 
 function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  // --- NUOVI STATI PER IL LOGIN ---
+  const [isAuth, setIsAuth] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  
+  // All'avvio, controlla se il telefono ha già memorizzato la password
+  useEffect(() => {
+      const savedPass = localStorage.getItem('appPassword');
+      if (savedPass) {
+          axios.defaults.headers.common['x-app-password'] = savedPass;
+          setIsAuth(true);
+      }
+      setLoadingAuth(false);
+  }, []);
+  
+  // Gestione del click sul pulsante "Entra"
+  const handleLogin = async (e) => {
+      e.preventDefault();
+      try {
+          await axios.post(`${API_URL}/login`, { password: passwordInput });
+          // Se corretta, la salva nel telefono
+          localStorage.setItem('appPassword', passwordInput);
+          axios.defaults.headers.common['x-app-password'] = passwordInput;
+          setIsAuth(true);
+          toast.success("Accesso effettuato!");
+      } catch (error) {
+          toast.error("Password errata!");
+      }
+  };
+  
+  // Gestione del Logout (opzionale)
+  const handleLogout = () => {
+      localStorage.removeItem('appPassword');
+      delete axios.defaults.headers.common['x-app-password'];
+      setIsAuth(false);
+  };
+
+    // --- (Qui sotto tieni tutto il tuo codice esistente: loadData, handleExport, ecc.) ---  const [activeTab, setActiveTab] = useState('dashboard');
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [refreshKey, setRefreshKey] = useState(0); // Per forzare il ricaricamento dati
 
   const triggerRefresh = () => setRefreshKey(old => old + 1);
 
+  // Se sta ancora caricando, non mostrare nulla
+  if (loadingAuth) return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Caricamento...</div>;
+  
+  // Se non è autorizzato, mostra SOLO la schermata di login
+  if (!isAuth) {
+      return (
+          <div className="min-h-screen bg-blue-900 flex items-center justify-center p-4">
+              <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm text-center">
+                  <h2 className="text-2xl font-bold mb-6 text-gray-800">Gestione Casa</h2>
+                  <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                      <input 
+                          type="password" 
+                          placeholder="Inserisci la password" 
+                          className="border p-3 rounded bg-gray-50 text-center text-lg focus:outline-none focus:border-blue-500"
+                          value={passwordInput}
+                          onChange={(e) => setPasswordInput(e.target.value)}
+                      />
+                      <button type="submit" className="bg-blue-600 text-white p-3 rounded font-bold hover:bg-blue-700 transition-colors shadow-md">
+                          Entra
+                      </button>
+                  </form>
+              </div>
+          </div>
+      );
+  }
+  
+  // Se è autorizzato, mostra la tua app normale!
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
       <Toaster position="top-center" reverseOrder={false} /> {/* <--- AGGIUNGI QUI */}
