@@ -3,6 +3,10 @@ import axios from 'axios';
 import { Trash2, PlusCircle, Wallet, TrendingUp, TrendingDown, FileSpreadsheet, FileText, X } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
+//const API_URL = 'http://192.168.178.33:5000/api';
+// --- CONFIGURAZIONE DINAMICA ---
+// Se siamo su localhost usa localhost, se siamo su IP (es. dal Mac) usa l'IP
+//const API_URL = `${window.location.protocol}//${window.location.hostname}:5000/api`;
 const API_URL = "https://gestione-spese-api.onrender.com/api";
 
 // Lista dei pannelli richiesti
@@ -42,47 +46,42 @@ const formatDate = (dateString) => {
 };
 
 function App() {
-    const [isAuth, setIsAuth] = useState(false);
-    const [passwordInput, setPasswordInput] = useState('');
-    const [loadingAuth, setLoadingAuth] = useState(true);
-
-    // 1. All'avvio, controlla se la password è già salvata
-    useEffect(() => {
-        const savedPass = localStorage.getItem('appPassword');
-        if (savedPass) {
-            setIsAuth(true);
-        }
-        setLoadingAuth(false);
-    }, []);
-
-    // 2. Gestione del Login con "fetch" nativo (senza axios)
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        try {
-            const response = await fetch(`${API_URL}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: passwordInput })
-            });
-
-            if (response.ok) {
-                // Password corretta!
-                localStorage.setItem('appPassword', passwordInput);
-                setIsAuth(true);
-            } else {
-                alert("Password errata!");
-            }
-        } catch (error) {
-            alert("Errore di connessione al server.");
-        }
-    };
-
-    const handleLogout = () => {
-        localStorage.removeItem('appPassword');
-        setIsAuth(false);
-        setPasswordInput('');
-    };
-
+  // --- NUOVI STATI PER IL LOGIN ---
+  const [isAuth, setIsAuth] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  
+  // All'avvio, controlla se il telefono ha già memorizzato la password
+  useEffect(() => {
+      const savedPass = localStorage.getItem('appPassword');
+      if (savedPass) {
+          axios.defaults.headers.common['x-app-password'] = savedPass;
+          setIsAuth(true);
+      }
+      setLoadingAuth(false);
+  }, []);
+  
+  // Gestione del click sul pulsante "Entra"
+  const handleLogin = async (e) => {
+      e.preventDefault();
+      try {
+          await axios.post(`${API_URL}/login`, { password: passwordInput });
+          // Se corretta, la salva nel telefono
+          localStorage.setItem('appPassword', passwordInput);
+          axios.defaults.headers.common['x-app-password'] = passwordInput;
+          setIsAuth(true);
+          toast.success("Accesso effettuato!");
+      } catch (error) {
+          toast.error("Password errata!");
+      }
+  };
+  
+  // Gestione del Logout (opzionale)
+  const handleLogout = () => {
+      localStorage.removeItem('appPassword');
+      delete axios.defaults.headers.common['x-app-password'];
+      setIsAuth(false);
+  };
 
     // --- (Qui sotto tieni tutto il tuo codice esistente: loadData, handleExport, ecc.) ---  const [activeTab, setActiveTab] = useState('dashboard');
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
