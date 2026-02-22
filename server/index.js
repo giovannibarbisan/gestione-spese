@@ -298,9 +298,6 @@ app.post('/api/report/chart', async (req, res) => {
         const nomeMese = mesi[parseInt(meseNum, 10) - 1];
         const titoloGrafico = `Uscite ${nomeMese} ${anno}`;
 
-        const labels = result.rows.map(r => r.descrizione);
-        const dataValues = result.rows.map(r => parseFloat(r.totale));
-
         // 2. Nuova Configurazione Grafico a Barre Standard
         const chartConfig = {
             type: 'bar',
