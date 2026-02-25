@@ -16,7 +16,7 @@ const PANELS = [
   { id: 'macchina', label: 'Macchina', type: 'CATEGORIA', cat: 'Macchina' },
   { id: 'fisse', label: 'Fisse', type: 'CATEGORIA', cat: 'Fisse' },
   { id: 'extra', label: 'Extra', type: 'CATEGORIA', cat: 'Extra' },
-  { id: 'utenze', label: 'Utenze', type: 'CATEGORIA', cat: 'Utenze' },
+  { id: 'utenze', label: 'Bollette/Utenze', type: 'CATEGORIA', cat: 'Bollette/Utenze' },
   { id: 'medici', label: 'Visite/Esami medici', type: 'CATEGORIA', cat: 'Visite/Esami medici' },
 ];
 
