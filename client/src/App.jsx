@@ -452,10 +452,13 @@ function ManagePanel({ month, refreshKey, onChange }) {
 
   // Avvia la modalità di modifica per una riga
   const startEditing = (item) => {
+    // Cerca il nome della categoria nei vari formati possibili
+    const nomeCategoria = item.CATEGORIA || item.DESCRIZIONE || item.descrizione || item.categoria || '';
+
     setEditingId(item.ID_MOVIMENTO);
     setEditForm({
-      data: new Date(item.DATA_MOVIMENTO).toISOString().slice(0, 10), // Formatta data per input type="date"
-      categoria: item.CATEGORIA, // Presuppone che l'API restituisca il nome in CATEGORIA
+      data: new Date(item.DATA_MOVIMENTO).toISOString().slice(0, 10),
+      categoria: nomeCategoria,
       importo: item.IMPORTO,
       nota: item.NOTA || ''
     });
@@ -463,6 +466,12 @@ function ManagePanel({ month, refreshKey, onChange }) {
 
   // Salva le modifiche
   const saveEdit = async (id) => {
+    // Controllo di sicurezza prima di inviare i dati
+    if (!editForm.categoria) {
+        toast.error("Seleziona una categoria valida!");
+        return;
+    }
+
     const loadingToast = toast.loading("Salvataggio modifiche...");
     try {
       await axios.put(`${API_URL}/movimenti/${id}`, editForm);
@@ -538,11 +547,18 @@ function ManagePanel({ month, refreshKey, onChange }) {
                     {/* COLONNA: CATEGORIA */}
                     <td className="px-4 py-3">
                       {isEditing ? (
-                        <select value={editForm.categoria} onChange={e => setEditForm({...editForm, categoria: e.target.value})} className="border rounded p-1 w-full text-sm">
+                        <select 
+                          value={editForm.categoria} 
+                          onChange={e => setEditForm({...editForm, categoria: e.target.value})} 
+                          className="border rounded p-1 w-full text-sm"
+                        >
+                          <option value="">Seleziona...</option>
                           {categories.map(c => <option key={c.DESCRIZIONE} value={c.DESCRIZIONE}>{c.DESCRIZIONE}</option>)}
                         </select>
                       ) : (
-                        <span className="font-medium text-gray-800">{item.CATEGORIA}</span>
+                        <span className="font-medium text-gray-800">
+                          {item.CATEGORIA || item.DESCRIZIONE || item.descrizione || item.categoria || '-'}
+                        </span>
                       )}
                     </td>
 
