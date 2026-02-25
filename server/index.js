@@ -271,7 +271,7 @@ app.post('/api/report/detail', async (req, res) => {
     }
 });
 
-// API: Genera Grafico a Torta (Solo Uscite) e salva su Drive
+// 8. API: Genera Grafico a Barre (Solo Uscite) e salva su Drive
 app.post('/api/report/chart', async (req, res) => {
     const { mese } = req.body; 
 
@@ -409,6 +409,33 @@ app.post('/api/report/chart', async (req, res) => {
 
     } catch (err) {
         console.error("ERRORE GRAFICO:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// 9. API: Modifica di un movimento esistente
+app.put('/api/movimenti/:id', async (req, res) => {
+    const { id } = req.params;
+    const { categoria, data, importo, nota } = req.body;
+
+    try {
+        // 1. Trova l'ID della nuova categoria dal nome
+        const catRes = await pool.query('SELECT id_categoria FROM categorie WHERE descrizione = $1', [categoria]);
+        if (catRes.rows.length === 0) return res.status(400).json({ error: "Categoria non valida" });
+        const id_categoria = catRes.rows[0].id_categoria;
+
+        // 2. Aggiorna il movimento nel database
+        const sql = `
+            UPDATE movimenti 
+            SET id_categoria = $1, data_movimento = $2, importo = $3, nota = $4
+            WHERE id_movimento = $5
+        `;
+        await pool.query(sql, [id_categoria, data, importo, nota, id]);
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
