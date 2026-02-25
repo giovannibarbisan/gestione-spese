@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Trash2, PlusCircle, Wallet, TrendingUp, TrendingDown, FileSpreadsheet, FileText, X, PieChart } from 'lucide-react'; // <--- AGGIUNTO PieChart
+import { Trash2, PlusCircle, Wallet, TrendingUp, TrendingDown, FileSpreadsheet, FileText, X, PieChart, Edit2, Check } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 // --- CONFIGURAZIONE DINAMICA ---
@@ -8,7 +8,8 @@ const API_URL = "https://gestione-spese-api.onrender.com/api";
 
 // Lista dei pannelli richiesti
 const PANELS = [
-  { id: 'dashboard',    label: 'Bilancio' },
+  { id: 'dashboard',    label: 'Bilancio'                                                           },
+  { id: 'gestione',     label: 'Gestione Movimenti'                                                 },
   { id: 'entrate',      label: 'Entrate',             type: 'ENTRATE'                               },
   { id: 'altre',        label: 'Altre Uscite',        type: 'CATEGORIA', cat: 'Altre Uscite'        },
   { id: 'negozi',       label: 'Negozi Vari',         type: 'CATEGORIA', cat: 'Negozi Vari'         },
@@ -167,6 +168,8 @@ function App() {
         {/* Dynamic Content */}
         {activeTab === 'dashboard' ? (
           <DashboardPanel month={currentMonth} refreshKey={refreshKey} />
+        ) : activeTab === 'gestione' ? (
+          <ManagePanel month={currentMonth} refreshKey={refreshKey} onChange={triggerRefresh} />
         ) : (
           <ListPanel 
             config={PANELS.find(p => p.id === activeTab)} 
@@ -175,6 +178,7 @@ function App() {
             onChange={triggerRefresh}
           />
         )}
+
 
         {/* Global Add Button */}
         <AddTransactionForm onAdd={triggerRefresh} />
@@ -419,6 +423,168 @@ function AddTransactionForm({ onAdd }) {
             Salva
         </button>
       </form>
+    </div>
+  );
+}
+
+// --- Componente: Gestione Movimenti (Tabella completa con Modifica) ---
+function ManagePanel({ month, refreshKey, onChange }) {
+  const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [total, setTotal] = useState(0);
+  
+  // Stati per la modifica in linea
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
+
+  useEffect(() => {
+    // Recupera TUTTI i movimenti del mese (senza filtri di categoria)
+    axios.get(`${API_URL}/movimenti`, { params: { mese: month } })
+      .then(res => {
+        setItems(res.data.movimenti || []);
+        setTotal(res.data.totale || 0);
+      })
+      .catch(err => console.error(err));
+      
+    // Recupera l'elenco delle categorie per il menu a tendina della modifica
+    axios.get(`${API_URL}/categorie`).then(res => setCategories(res.data));
+  }, [month, refreshKey]);
+
+  // Avvia la modalità di modifica per una riga
+  const startEditing = (item) => {
+    setEditingId(item.ID_MOVIMENTO);
+    setEditForm({
+      data: new Date(item.DATA_MOVIMENTO).toISOString().slice(0, 10), // Formatta data per input type="date"
+      categoria: item.CATEGORIA, // Presuppone che l'API restituisca il nome in CATEGORIA
+      importo: item.IMPORTO,
+      nota: item.NOTA || ''
+    });
+  };
+
+  // Salva le modifiche
+  const saveEdit = async (id) => {
+    const loadingToast = toast.loading("Salvataggio modifiche...");
+    try {
+      await axios.put(`${API_URL}/movimenti/${id}`, editForm);
+      toast.success("Movimento aggiornato!", { id: loadingToast });
+      setEditingId(null);
+      onChange(); // Ricarica i dati
+    } catch (err) {
+      toast.error("Errore salvataggio: " + err.message, { id: loadingToast });
+    }
+  };
+
+  const confirmDelete = (id) => {
+    const loadingToast = toast.loading("Cancellazione in corso...");
+    axios.delete(`${API_URL}/movimenti/${id}`)
+      .then(() => {
+        toast.success("Voce eliminata!", { id: loadingToast });
+        onChange(); 
+      })
+      .catch(() => toast.error("Errore cancellazione", { id: loadingToast }));
+  };
+
+  const handleDelete = (id) => {
+    toast((t) => (
+      <div className="flex flex-col gap-3 min-w-[200px]">
+        <div className="font-medium text-gray-800 text-center">Eliminare questa riga?</div>
+        <div className="flex gap-3 justify-center">
+          <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1 text-sm bg-gray-100 rounded">No</button>
+          <button onClick={() => { toast.dismiss(t.id); confirmDelete(id); }} className="px-3 py-1 text-sm text-white bg-red-600 rounded">Sì, elimina</button>
+        </div>
+      </div>
+    ), { duration: Infinity });
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+        <h2 className="text-xl font-bold text-gray-800">Tutti i Movimenti ({items.length})</h2>
+        <div className="text-lg font-semibold">
+          Saldo Mese: <span className={total >= 0 ? 'text-green-600' : 'text-red-600'}>{formatCurrency(total)}</span>
+        </div>
+      </div>
+      
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead className="bg-blue-900 text-white text-sm uppercase">
+            <tr>
+              <th className="px-4 py-3">Data</th>
+              <th className="px-4 py-3">Categoria</th>
+              <th className="px-4 py-3">Nota</th>
+              <th className="px-4 py-3 text-right">Importo</th>
+              <th className="px-4 py-3 text-center">Azioni</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {items.length === 0 ? (
+              <tr><td colSpan="5" className="px-6 py-8 text-center text-gray-400">Nessun movimento nel mese</td></tr>
+            ) : (
+              items.map(item => {
+                const isEditing = editingId === item.ID_MOVIMENTO;
+                const isEntrata = item.TIPO_MOVIMENTO === 'E'; // Per il colore
+
+                return (
+                  <tr key={item.ID_MOVIMENTO} className={isEditing ? 'bg-blue-50' : 'hover:bg-gray-50'}>
+                    {/* COLONNA: DATA */}
+                    <td className="px-4 py-3">
+                      {isEditing ? (
+                        <input type="date" value={editForm.data} onChange={e => setEditForm({...editForm, data: e.target.value})} className="border rounded p-1 w-full text-sm" />
+                      ) : (
+                        <span className="text-gray-600 whitespace-nowrap">{formatDate(item.DATA_MOVIMENTO)}</span>
+                      )}
+                    </td>
+
+                    {/* COLONNA: CATEGORIA */}
+                    <td className="px-4 py-3">
+                      {isEditing ? (
+                        <select value={editForm.categoria} onChange={e => setEditForm({...editForm, categoria: e.target.value})} className="border rounded p-1 w-full text-sm">
+                          {categories.map(c => <option key={c.DESCRIZIONE} value={c.DESCRIZIONE}>{c.DESCRIZIONE}</option>)}
+                        </select>
+                      ) : (
+                        <span className="font-medium text-gray-800">{item.CATEGORIA}</span>
+                      )}
+                    </td>
+
+                    {/* COLONNA: NOTA */}
+                    <td className="px-4 py-3">
+                      {isEditing ? (
+                        <input type="text" value={editForm.nota} onChange={e => setEditForm({...editForm, nota: e.target.value})} className="border rounded p-1 w-full text-sm" />
+                      ) : (
+                        <span className="text-gray-600">{item.NOTA || '-'}</span>
+                      )}
+                    </td>
+
+                    {/* COLONNA: IMPORTO */}
+                    <td className={`px-4 py-3 text-right font-bold ${isEntrata ? 'text-green-600' : 'text-gray-800'}`}>
+                      {isEditing ? (
+                        <input type="number" step="0.01" value={editForm.importo} onChange={e => setEditForm({...editForm, importo: e.target.value})} className="border rounded p-1 w-24 text-right text-sm" />
+                      ) : (
+                        formatCurrency(item.IMPORTO)
+                      )}
+                    </td>
+
+                    {/* COLONNA: AZIONI */}
+                    <td className="px-4 py-3 text-center">
+                      {isEditing ? (
+                        <div className="flex justify-center gap-2">
+                          <button onClick={() => saveEdit(item.ID_MOVIMENTO)} className="text-green-600 hover:bg-green-100 p-2 rounded-full" title="Salva"><Check size={18} strokeWidth={2.5} /></button>
+                          <button onClick={() => setEditingId(null)} className="text-gray-500 hover:bg-gray-200 p-2 rounded-full" title="Annulla"><X size={18} strokeWidth={2.5} /></button>
+                        </div>
+                      ) : (
+                        <div className="flex justify-center gap-2">
+                          <button onClick={() => startEditing(item)} className="text-blue-500 hover:bg-blue-100 p-2 rounded-full" title="Modifica"><Edit2 size={18} /></button>
+                          <button onClick={() => handleDelete(item.ID_MOVIMENTO)} className="text-red-500 hover:bg-red-100 p-2 rounded-full" title="Elimina"><Trash2 size={18} /></button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
