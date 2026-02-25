@@ -99,7 +99,7 @@ app.get('/api/movimenti', async (req, res) => {
         let query = `
             SELECT m.id_movimento AS "ID_MOVIMENTO", m.importo AS "IMPORTO", 
                    m.nota AS "NOTA", m.data_movimento AS "DATA_MOVIMENTO", 
-                   c.descrizione AS "DESCRIZIONE" 
+                   c.descrizione AS "DESCRIZIONE", c.tipo_movimento
             FROM movimenti m 
             JOIN categorie c ON m.id_categoria = c.id_categoria
             WHERE TO_CHAR(m.data_movimento, 'YYYY-MM') = $1

@@ -444,15 +444,15 @@ function ManagePanel({ month, refreshKey, onChange }) {
       .then(res => {
         const tuttiIMovimenti = res.data.movimenti || [];
         setItems(tuttiIMovimenti);
-        
-        // Calcolo separato di entrate, uscite e saldo
+
+        // Calcolo separato di entrate, uscite e saldo (con supporto per maiuscole/minuscole di Postgres)
         const totEntrate = tuttiIMovimenti
-            .filter(item => item.TIPO_MOVIMENTO === 'E')
-            .reduce((somma, item) => somma + parseFloat(item.IMPORTO), 0);
+            .filter(item => item.TIPO_MOVIMENTO === 'E' || item.tipo_movimento === 'E')
+            .reduce((somma, item) => somma + parseFloat(item.IMPORTO || item.importo), 0);
             
         const totUscite = tuttiIMovimenti
-            .filter(item => item.TIPO_MOVIMENTO === 'U')
-            .reduce((somma, item) => somma + parseFloat(item.IMPORTO), 0);
+            .filter(item => item.TIPO_MOVIMENTO === 'U' || item.tipo_movimento === 'U')
+            .reduce((somma, item) => somma + parseFloat(item.IMPORTO || item.importo), 0);
             
         setTotals({
             entrate: totEntrate,
@@ -560,7 +560,7 @@ function ManagePanel({ month, refreshKey, onChange }) {
             ) : (
               items.map(item => {
                 const isEditing = editingId === item.ID_MOVIMENTO;
-                const isEntrata = item.TIPO_MOVIMENTO === 'E'; // Per il colore
+                const isEntrata = item.TIPO_MOVIMENTO === 'E' || item.tipo_movimento === 'E'; // Per il colore
 
                 return (
                   <tr key={item.ID_MOVIMENTO} className={isEditing ? 'bg-blue-50' : 'hover:bg-gray-50'}>
