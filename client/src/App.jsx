@@ -431,18 +431,34 @@ function AddTransactionForm({ onAdd }) {
 function ManagePanel({ month, refreshKey, onChange }) {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [total, setTotal] = useState(0);
-  
+  // Stati per riepilogo mese
+  const [totals, setTotals] = useState({ entrate: 0, uscite: 0, saldo: 0 });
+
   // Stati per la modifica in linea
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
 
   useEffect(() => {
-    // Recupera TUTTI i movimenti del mese (senza filtri di categoria)
+    // Recupera TUTTI i movimenti del mese
     axios.get(`${API_URL}/movimenti`, { params: { mese: month } })
       .then(res => {
-        setItems(res.data.movimenti || []);
-        setTotal(res.data.totale || 0);
+        const tuttiIMovimenti = res.data.movimenti || [];
+        setItems(tuttiIMovimenti);
+        
+        // Calcolo separato di entrate, uscite e saldo
+        const totEntrate = tuttiIMovimenti
+            .filter(item => item.TIPO_MOVIMENTO === 'E')
+            .reduce((somma, item) => somma + parseFloat(item.IMPORTO), 0);
+            
+        const totUscite = tuttiIMovimenti
+            .filter(item => item.TIPO_MOVIMENTO === 'U')
+            .reduce((somma, item) => somma + parseFloat(item.IMPORTO), 0);
+            
+        setTotals({
+            entrate: totEntrate,
+            uscite: totUscite,
+            saldo: totEntrate - totUscite
+        });
       })
       .catch(err => console.error(err));
       
@@ -507,12 +523,25 @@ function ManagePanel({ month, refreshKey, onChange }) {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+
+      <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
         <h2 className="text-xl font-bold text-gray-800">Tutti i Movimenti ({items.length})</h2>
-        <div className="text-lg font-semibold">
-          Saldo Mese: <span className={total >= 0 ? 'text-green-600' : 'text-red-600'}>{formatCurrency(total)}</span>
+        
+        {/* Nuovo blocco riepilogativo con i 3 valori e colori fissi */}
+        <div className="flex flex-wrap justify-center md:justify-end gap-4 md:gap-6 text-sm md:text-base font-semibold bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+          <div>
+            Entrate: <span className="text-blue-600 ml-1">{formatCurrency(totals.entrate)}</span>
+          </div>
+          <div className="hidden md:block text-gray-300">|</div>
+          <div>
+            Uscite: <span className="text-red-600 ml-1">{formatCurrency(totals.uscite)}</span>
+          </div>
+          <div className="hidden md:block text-gray-300">|</div>
+          <div>
+            Saldo: <span className="text-green-600 ml-1">{formatCurrency(totals.saldo)}</span>
+          </div>
         </div>
-      </div>
+      </div> 
       
       <div className="overflow-x-auto">
         <table className="w-full text-left">
