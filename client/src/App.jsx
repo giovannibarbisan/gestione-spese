@@ -8,16 +8,17 @@ const API_URL = "https://gestione-spese-api.onrender.com/api";
 
 // Lista dei pannelli richiesti
 const PANELS = [
-  { id: 'dashboard', label: 'Bilancio' },
-  { id: 'entrate', label: 'Entrate', type: 'ENTRATE' },
-  { id: 'negozi', label: 'Negozi Vari', type: 'CATEGORIA', cat: 'Negozi Vari' },
-  { id: 'ccr', label: 'Ricariche CCR', type: 'CATEGORIA', cat: 'Ricariche CCR' },
-  { id: 'divertimento', label: 'Divertimento', type: 'CATEGORIA', cat: 'Divertimento' },
-  { id: 'macchina', label: 'Macchina', type: 'CATEGORIA', cat: 'Macchina' },
-  { id: 'fisse', label: 'Fisse', type: 'CATEGORIA', cat: 'Fisse' },
-  { id: 'extra', label: 'Extra', type: 'CATEGORIA', cat: 'Extra' },
-  { id: 'utenze', label: 'Bollette/Utenze', type: 'CATEGORIA', cat: 'Bollette/Utenze' },
-  { id: 'medici', label: 'Visite/Esami medici', type: 'CATEGORIA', cat: 'Visite/Esami medici' },
+  { id: 'dashboard',    label: 'Bilancio' },
+  { id: 'entrate',      label: 'Entrate',             type: 'ENTRATE'                               },
+  { id: 'altre',        label: 'Altre Uscite',        type: 'CATEGORIA', cat: 'Altre Uscite'        },
+  { id: 'negozi',       label: 'Negozi Vari',         type: 'CATEGORIA', cat: 'Negozi Vari'         },
+  { id: 'ccr',          label: 'Ricariche CCR',       type: 'CATEGORIA', cat: 'Ricariche CCR'       },
+  { id: 'divertimento', label: 'Divertimento',        type: 'CATEGORIA', cat: 'Divertimento'        },
+  { id: 'macchina',     label: 'Macchina',            type: 'CATEGORIA', cat: 'Macchina'            },
+  { id: 'fisse',        label: 'Fisse',               type: 'CATEGORIA', cat: 'Fisse'               },
+  { id: 'extra',        label: 'Extra',               type: 'CATEGORIA', cat: 'Extra'               },
+  { id: 'utenze',       label: 'Bollette/Utenze',     type: 'CATEGORIA', cat: 'Bollette/Utenze'     },
+  { id: 'medici',       label: 'Visite/Esami medici', type: 'CATEGORIA', cat: 'Visite/Esami medici' },
 ];
 
 // --- UTILITY FUNCTIONS ---
