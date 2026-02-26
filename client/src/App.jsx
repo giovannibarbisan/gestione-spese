@@ -9,7 +9,7 @@ const API_URL = "https://gestione-spese-api.onrender.com/api";
 // Lista dei pannelli richiesti
 const PANELS = [
   { id: 'dashboard',    label: 'Bilancio'                                                           },
-  { id: 'gestione',     label: 'Gestione Movimenti'                                                 },
+  { id: 'gestione',     label: 'Gest. Movimenti'                                                 },
   { id: 'entrate',      label: 'Entrate',             type: 'ENTRATE'                               },
   { id: 'altre',        label: 'Altre Uscite',        type: 'CATEGORIA', cat: 'Altre Uscite'        },
   { id: 'negozi',       label: 'Negozi Vari',         type: 'CATEGORIA', cat: 'Negozi Vari'         },
